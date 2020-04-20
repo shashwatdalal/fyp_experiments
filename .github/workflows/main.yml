@@ -33,7 +33,7 @@ jobs:
       uses: shimataro/ssh-key-action@v2
       with:
         key: ${{ secrets.SHASH_MACBOOK_PRO_RSA }}
-        known_hosts: ''
+        known_hosts: ${{ secrets.KNOWN_HOSTS }}
     - name: ssh-to-cluster
       run: |
         ssh -t spd16@shell1.doc.ic.ac.uk ssh gpucluster.doc.ic.ac.uk
