@@ -17,3 +17,14 @@ jobs:
         pip install -r ci_requirements.txt
     - name: build-config
       run: python build_config.py
+    - name: commit-build
+      run: |
+        git config --local user.email "fyp_bot@github.com"
+        git config --local user.name "GPU Job Config Builder"
+        git add job_sumbission.sh
+        git commit -m "submission build"
+    - name: push-build
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+  
