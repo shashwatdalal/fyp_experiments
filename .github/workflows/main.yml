@@ -36,5 +36,5 @@ jobs:
         known_hosts: ${{ secrets.KNOWN_HOSTS }}
     - name: ssh-to-cluster
       run: |
-        ssh -tt spd16@shell1.doc.ic.ac.uk ssh gpucluster.doc.ic.ac.uk
+        ssh -tt spd16@shell1.doc.ic.ac.uk ssh spd16@gpucluster.doc.ic.ac.uk
   
