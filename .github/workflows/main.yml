@@ -32,7 +32,7 @@ jobs:
     - name: install-ssh
       uses: shimataro/ssh-key-action@v2
       with:
-        key: ${{ SHASH_MACBOOK_PRO_RSA }}
+        key: ${{ secrets.SHASH_MACBOOK_PRO_RSA }}
     - name: ssh-to-cluster
       run: |
         ssh -t spd16@shell1.doc.ic.ac.uk ssh gpucluster.doc.ic.ac.uk
