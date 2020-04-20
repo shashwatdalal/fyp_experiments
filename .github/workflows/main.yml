@@ -36,7 +36,10 @@ jobs:
       with:
         key: ${{ secrets.SHASH_MACBOOK_PRO_RSA }}
         known_hosts: ${{ secrets.KNOWN_HOSTS }}
-    - name: add-job-to-batch
+    - name: add-job-to-queue
       run: |
-        ssh -tt spd16@shell3.doc.ic.ac.uk ssh spd16@gpucluster.doc.ic.ac.uk put_on_queue.sh
-  
+        ssh -tt spd16@shell3.doc.ic.ac.uk ssh spd16@gpucluster.doc.ic.ac.uk << EOF
+          cd /vol/bitbucket/spd16/fyp_experiments
+          git pull
+          sbatch job_config.sh
+        EOF
