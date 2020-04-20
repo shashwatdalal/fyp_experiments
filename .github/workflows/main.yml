@@ -29,4 +29,10 @@ jobs:
       uses: ad-m/github-push-action@master
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
+    - name: install-ssh
+        uses: shimataro/ssh-key-action@v2
+        key: ${{ SHASH_MACBOOK_PRO_RSA }}
+    - name: ssh-to-cluster
+      run: |
+        ssh -t spd16@shell1.doc.ic.ac.uk ssh gpucluster.doc.ic.ac.uk
   
