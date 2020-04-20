@@ -15,7 +15,7 @@ python model.py
 /usr/bin/nvidia-smi
 uptime""".format("{}.out".format(JOB_NAME), JOB_NAME)
 
-CONFIG_FILE = 'job_sumbission.sh'
+CONFIG_FILE = 'job_submission.sh'
 if os.path.exists(CONFIG_FILE):
   os.remove(CONFIG_FILE)
 with open(CONFIG_FILE, 'w+') as cf_fd:
