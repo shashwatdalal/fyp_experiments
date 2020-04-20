@@ -3,7 +3,7 @@ import os
 JOB_NAME = 'hello-cluster-world'
 
 config = """#!/bin/bash
-#SBATCH --gres=gpu:1,gpu2
+#SBATCH --gres=gpu:1
 #SBATCH --mail-type=NONE # required to send email notifcations
 #SBATCH --output={}
 #SBATCH --job-name={}
