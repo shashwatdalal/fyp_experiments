@@ -42,4 +42,5 @@ jobs:
           cd /vol/bitbucket/spd16/fyp_experiments
           git pull
           sbatch job_config.sh
+          exit
         EOF
