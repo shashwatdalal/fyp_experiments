@@ -30,7 +30,8 @@ jobs:
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
     - name: install-ssh
-        uses: shimataro/ssh-key-action@v2
+      uses: shimataro/ssh-key-action@v2
+      with:
         key: ${{ SHASH_MACBOOK_PRO_RSA }}
     - name: ssh-to-cluster
       run: |
