@@ -20,13 +20,13 @@ jobs:
     - name: build-config
       run: |
         python build_config.py
-        chmod +x job_submission.sh
+        chmod +x job_config.sh
     - name: commit-build-config
       run: |
         git config --local user.email "fyp_bot@github.com"
         git config --local user.name "GPU Job Config Builder"
-        git add job_submission.sh
-        git commit -m "job_submission build"
+        git add job_config.sh
+        git commit -m "job_config build"
     - name: push-build-config
       uses: ad-m/github-push-action@master
       with:
@@ -38,9 +38,5 @@ jobs:
         known_hosts: ${{ secrets.KNOWN_HOSTS }}
     - name: add-job-to-batch
       run: |
-        ssh -tt spd16@shell3.doc.ic.ac.uk ssh spd16@gpucluster.doc.ic.ac.uk 
-        cd /vol/bitbucket/spd16/fyp_experiments
-        git pull
-        sbatch job_submission.sh
-        exit
+        ssh -tt spd16@shell3.doc.ic.ac.uk ssh spd16@gpucluster.doc.ic.ac.uk put_on_queue.sh
   
