@@ -1,6 +1,6 @@
 import os
 
-JOB_NAME = 'hello-cluster-world1'
+JOB_NAME = 'hello-cluster-world'
 
 config = """#!/bin/bash
 #SBATCH --gres=gpu:1
