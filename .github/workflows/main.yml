@@ -13,28 +13,34 @@ jobs:
       uses: actions/setup-python@v1
       with:
         python-version: '3.x'
-    - name: Install dependencies
+    - name: install-dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r ci_requirements.txt
     - name: build-config
-      run: python build_config.py
-    - name: commit-build
+      run: |
+        python build_config.py
+        chmod +x job_submission.sh
+    - name: commit-build-config
       run: |
         git config --local user.email "fyp_bot@github.com"
         git config --local user.name "GPU Job Config Builder"
         git add job_sumbission.sh
         git commit -m "submission build"
-    - name: push-build
+    - name: push-build-config
       uses: ad-m/github-push-action@master
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
-    - name: install-ssh
+    - name: install-ssh-keys
       uses: shimataro/ssh-key-action@v2
       with:
         key: ${{ secrets.SHASH_MACBOOK_PRO_RSA }}
         known_hosts: ${{ secrets.KNOWN_HOSTS }}
-    - name: ssh-to-cluster
+    - name: add-job-to-batch
       run: |
-        ssh -tt spd16@shell3.doc.ic.ac.uk ssh spd16@gpucluster.doc.ic.ac.uk echo "hello"
+        ssh -tt spd16@shell3.doc.ic.ac.uk ssh spd16@gpucluster.doc.ic.ac.uk 
+        cd /vol/bitbucket/spd16/fyp_experiments
+        git pull
+        sbatch job_submission.sh
+        exit
   
