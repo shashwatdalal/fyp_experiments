@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --gres=gpu:1,gpu2
+#SBATCH --gres=gpu:1
 #SBATCH --mail-type=NONE # required to send email notifcations
 #SBATCH --output=hello-cluster-world.out
 #SBATCH --job-name=hello-cluster-world
