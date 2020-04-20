@@ -7,7 +7,7 @@ config = """#!/bin/bash
 #SBATCH --mail-type=NONE # required to send email notifcations
 #SBATCH --output={}
 #SBATCH --job-name={}
-export PATH=/vol/bitbucket/${USER}/miniconda3/bin/:$PATH
+export PATH=/vol/bitbucket/$\{USER\}/miniconda3/bin/:$PATH
 source activate
 source /vol/cuda/10.0.130/setup.sh
 TERM=vt100 # or TERM=xterm
