@@ -2,6 +2,7 @@ import os
 from typing import Tuple, List
 from torchtext.data import Iterator, Field, BPTTIterator
 
+from data.bigquery_loader import BigQueryLoader
 from data.language_model_dataset import LocalLanguageModelingDataset
 
 
