@@ -4,12 +4,14 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 
 [dev-packages]
+jupyterlab = "*"
 
 [packages]
 torch = "*"
 google-cloud-bigquery = "*"
 torchtext = "*"
 pandas = "*"
+pyyaml = "*"
 
 [requires]
 python_version = "3.7"

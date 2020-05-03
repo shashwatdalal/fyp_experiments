@@ -1,0 +1,31 @@
+experiment:
+  name: reddit_comments_test
+  submit_job: False
+  n_GPU: 2
+  log: True
+
+data:
+  dataset: Reddit Comments
+  year: 2019
+  month: 10
+
+clients:
+  n_clients: 10
+  max_words_per_sample: 20
+  min_words_per_sample: 7
+  max_samples: 200
+  min_samples: 150
+  train_ratio: 0.8
+
+language_model:
+  vocab_size: 20_000
+  batch_size: 32
+  bptt_len: 30
+  rnn_type: GRU
+  embedding_dim: 32
+  hidden_dim: 90
+  n_layers: 2
+
+federated_parameters:
+  n_rounds: 5
+  n_epochs: 2
