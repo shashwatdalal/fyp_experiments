@@ -7,6 +7,6 @@
     source activate
     source /vol/cuda/10.0.130/setup.sh
     TERM=vt100 # or TERM=xterm
-    python model.py
+    python main.py
     /usr/bin/nvidia-smi
     uptime
