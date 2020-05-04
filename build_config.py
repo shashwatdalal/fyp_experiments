@@ -7,17 +7,17 @@ with open('parameters.yaml') as param_fd:
 if parameters['experiment']['submit_job']:
     JOB_NAME = parameters['experiment']['name']
     config = """#!/bin/bash
-    #SBATCH --gres=gpu:1
-    #SBATCH --mail-type=NONE # required to send email notifcations
-    #SBATCH --output={}
-    #SBATCH --job-name={}
-    export PATH=/vol/bitbucket/${{USER}}/miniconda3/bin/:$PATH
-    source activate
-    source /vol/cuda/10.0.130/setup.sh
-    TERM=vt100 # or TERM=xterm
-    python main.py
-    /usr/bin/nvidia-smi
-    uptime""".format("{}.out".format(JOB_NAME), JOB_NAME)
+#SBATCH --gres=gpu:1
+#SBATCH --mail-type=NONE # required to send email notifcations
+#SBATCH --output={}
+#SBATCH --job-name={}
+export PATH=/vol/bitbucket/${{USER}}/miniconda3/bin/:$PATH
+source activate
+source /vol/cuda/10.0.130/setup.sh
+TERM=vt100 # or TERM=xterm
+python main.py
+/usr/bin/nvidia-smi
+uptime""".format("{}.out".format(JOB_NAME), JOB_NAME)
 else:
     config = ""
 CONFIG_FILE = 'job_config.sh'
