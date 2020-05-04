@@ -1,6 +1,6 @@
 experiment:
   name: reddit_comments_test
-  submit_job: False
+  submit_job: True
   log: True
 
 data:
