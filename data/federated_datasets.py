@@ -30,8 +30,7 @@ class FederatedLanguageDataset(FederatedDataset):
         self.vocab_size = vocab_size
         self.batch_size = batch_size
         self.bptt_len = bptt_len
-
-        self.field = Field(lower=True)
+        self.field = Field(lower=True, tokenize='basic_english')
         self.build_vocab()
 
     def build_vocab(self):
