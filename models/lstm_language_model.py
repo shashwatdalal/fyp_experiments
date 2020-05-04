@@ -8,9 +8,9 @@ class RNNModel(nn.Module):
     def __init__(self, rnn_type, vocab_size, embedding_dim, hidden_dim, n_layers, batch_size, dropout=0.5,
                  tie_weights=False):
         super(RNNModel, self).__init__()
-        self.vocab_size = vocab_size
+        self.vocab_size = vocab_size + 1
         self.drop = nn.Dropout(dropout)
-        self.encoder = nn.Embedding(vocab_size, embedding_dim)
+        self.encoder = nn.Embedding(self.vocab_size, embedding_dim)
         if rnn_type in ['LSTM', 'GRU']:
             self.rnn = getattr(nn, rnn_type)(embedding_dim, hidden_dim, n_layers, dropout=dropout)
         else:
@@ -20,7 +20,7 @@ class RNNModel(nn.Module):
                 raise ValueError("""An invalid option for `--model` was supplied,
                                  options are ['LSTM', 'GRU', 'RNN_TANH' or 'RNN_RELU']""")
             self.rnn = nn.RNN(embedding_dim, hidden_dim, n_layers, nonlinearity=nonlinearity, dropout=dropout)
-        self.decoder = nn.Linear(hidden_dim, vocab_size)
+        self.decoder = nn.Linear(hidden_dim, self.vocab_size)
 
         # Optionally tie weights as in:
         # "Using the Output Embedding to Improve Language Models" (Press & Wolf 2016)
