@@ -1,5 +1,5 @@
 experiment:
-  name: reddit_comments_10
+  name: reddit_comments_100_test
   submit_job: True
   log: False
 
