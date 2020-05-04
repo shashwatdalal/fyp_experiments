@@ -47,9 +47,8 @@ class BigQueryLoader:
             pd.Series(clients).to_csv(os.path.join(self.extraction_dir, 'clients.txt'),
                                       header=False, index=False)
         else:
-            self.clients = list(
-                pd.read_csv(os.path.join(self.extraction_dir, 'clients.txt'),
-                            squeeze=True, header=None))
+            self.clients = list(pd.read_csv(os.path.join(self.extraction_dir, 'clients.txt'),
+                                            squeeze=True, header=None))
 
 
 class RedditCommentsLoader(BigQueryLoader):

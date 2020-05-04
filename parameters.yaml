@@ -21,11 +21,11 @@ language_model:
   vocab_size: 20_000
   batch_size: 32
   bptt_len: 30
-  rnn_type: GRU
+  rnn_type: LSTM
   embedding_dim: 32
   hidden_dim: 90
   n_layers: 2
 
 federated_parameters:
-  n_rounds: 5
-  n_epochs: 2
+  n_rounds: 3
+  n_epochs: 1
