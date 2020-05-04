@@ -1,7 +1,6 @@
 experiment:
   name: reddit_comments_test
   submit_job: False
-  n_GPU: 2
   log: True
 
 data:

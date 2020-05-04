@@ -1,22 +1,27 @@
 import os
+import yaml
 
-JOB_NAME = 'hello-cluster-world'
+with open('parameters.yaml') as param_fd:
+    parameters = yaml.safe_load(param_fd)
 
-config = """#!/bin/bash
-#SBATCH --gres=gpu:1
-#SBATCH --mail-type=NONE # required to send email notifcations
-#SBATCH --output={}
-#SBATCH --job-name={}
-export PATH=/vol/bitbucket/${{USER}}/miniconda3/bin/:$PATH
-source activate
-source /vol/cuda/10.0.130/setup.sh
-TERM=vt100 # or TERM=xterm
-python model.py
-/usr/bin/nvidia-smi
-uptime""".format("{}.out".format(JOB_NAME), JOB_NAME)
-
+if parameters['experiment']['submit_job']:
+    JOB_NAME = parameters['experiment']['name']
+    config = """#!/bin/bash
+    #SBATCH --gres=gpu:1
+    #SBATCH --mail-type=NONE # required to send email notifcations
+    #SBATCH --output={}
+    #SBATCH --job-name={}
+    export PATH=/vol/bitbucket/${{USER}}/miniconda3/bin/:$PATH
+    source activate
+    source /vol/cuda/10.0.130/setup.sh
+    TERM=vt100 # or TERM=xterm
+    python model.py
+    /usr/bin/nvidia-smi
+    uptime""".format("{}.out".format(JOB_NAME), JOB_NAME)
+else:
+    config = ""
 CONFIG_FILE = 'job_config.sh'
 if os.path.exists(CONFIG_FILE):
-  os.remove(CONFIG_FILE)
+    os.remove(CONFIG_FILE)
 with open(CONFIG_FILE, 'w+') as cf_fd:
     cf_fd.write(config)
