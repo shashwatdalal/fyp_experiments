@@ -8,7 +8,7 @@ class RNNModel(nn.Module):
     def __init__(self, rnn_type, vocab_size, embedding_dim, hidden_dim, n_layers, batch_size, dropout=0.5,
                  tie_weights=False):
         super(RNNModel, self).__init__()
-        self.vocab_size = vocab_size + 1
+        self.vocab_size = vocab_size + 2
         self.drop = nn.Dropout(dropout)
         self.encoder = nn.Embedding(self.vocab_size, embedding_dim)
         if rnn_type in ['LSTM', 'GRU']:
@@ -47,7 +47,11 @@ class RNNModel(nn.Module):
         self.decoder.weight.data.uniform_(-initrange, initrange)
 
     def forward(self, input, hidden):
-        emb = self.drop(self.encoder(input))
+        try:
+            emb = self.drop(self.encoder(input))
+        except IndexError:
+            print(input)
+            exit(1)
         output, hidden = self.rnn(emb, hidden)
         output = self.drop(output)
         decoded = self.decoder(output)

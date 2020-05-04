@@ -28,6 +28,10 @@ def configure_cuda():
     torch.manual_seed(0)
     return device
 
+def top3Accuracy(predictions, target):
+    in_top3 = (torch.topk(predictions, k=3, dim=1).indices == target.view(-1)[..., None]).any(-1)
+    return torch.sum(in_top3).item() / len(in_top3)
+
 
 if __name__ == '__main__':
 
@@ -95,7 +99,8 @@ if __name__ == '__main__':
             loss_fn = nn.CrossEntropyLoss()
 
             # perform local update
-            train_loss, test_loss = [], []
+            # todo account for different sized batches
+            train_loss, test_loss, test_accuracy = [], [], []
             for epoch in trange(parameters['federated_parameters']['n_epochs'],
                                 position=2, leave=False, desc="Epochs", disable=not TQDM):
                 train_iter, test_iter = dataset[client]
@@ -107,16 +112,20 @@ if __name__ == '__main__':
                     train_loss.append(loss.item())
                     loss.backward()
                     client_optimizer.step()
-            print(round, client, sum(train_loss) / len(train_loss))
 
-                # # calculate test loss
-                # for batch in tqdm(test_iter, position=3, leave=False, desc="Test Batch", disable=not TQDM):
-                #     with torch.no_grad():
-                #         text, target = batch.text, batch.target
-                #         predictions, _ = client_model(text, client_model.init_hidden())
-                #         test_loss.append(loss_fn(predictions, target.view(-1)))
+                # calculate test loss
+                for batch in tqdm(test_iter, position=3, leave=False, desc="Test Batch", disable=not TQDM):
+                    with torch.no_grad():
+                        text, target = batch.text, batch.target
+                        predictions, _ = client_model(text, client_model.init_hidden())
+                        test_loss.append(loss_fn(predictions, target.view(-1)))
+                        test_accuracy.append(top3Accuracy(predictions, target))
 
-                # todo log test/train loss
+            # todo properly log test/train loss
+            print("[{}:{}]".format(round, client),
+                  "Test Accuracy: {}".format(sum(test_accuracy) / len(test_accuracy)),
+                  "Training Loss: {}".format(sum(train_loss) / len(train_loss)),
+                  "Testing Loss: {}".format(sum(test_loss) / len(test_loss)))
 
             # 'send' server update
             for (name, client_param), server_param in zip(client_model.named_parameters(), server_model.parameters()):
