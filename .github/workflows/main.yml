@@ -16,7 +16,7 @@ jobs:
     - name: install-dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -r ci_requirements.txt
+        pip install -r pyyaml
     - name: build-config
       run: |
         python build_config.py
