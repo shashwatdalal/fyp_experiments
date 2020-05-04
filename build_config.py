@@ -15,7 +15,7 @@ if parameters['experiment']['submit_job']:
     source activate
     source /vol/cuda/10.0.130/setup.sh
     TERM=vt100 # or TERM=xterm
-    python model.py
+    python main.py
     /usr/bin/nvidia-smi
     uptime""".format("{}.out".format(JOB_NAME), JOB_NAME)
 else:
