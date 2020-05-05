@@ -85,10 +85,10 @@ if __name__ == '__main__':
     # logging table
     model_param_names, _ = zip(*server_model.named_parameters())
     metrics = list(model_param_names) + ['test_acc', 'train_loss', 'test_loss']
-    column_names = product(model_param_names, clients)
+    column_names = product(metrics, clients)
     logging_table = pd.DataFrame(
         columns=pd.MultiIndex.from_tuples(column_names),
-        index=pd.Index(range(parameters['federated_parameters']['n_rounds']), name='Round')
+        index=pd.Index(range(parameters['federated_parameters']['n_rounds']))
     )
 
     # start training
@@ -135,12 +135,10 @@ if __name__ == '__main__':
                   "Test Accuracy: {}".format(sum(test_accuracy) / len(test_accuracy)),
                   "Training Loss: {}".format(sum(train_loss) / len(train_loss)),
                   "Testing Loss: {}".format(sum(test_loss) / len(test_loss)))
-
             # 'send' server update
             for (name, client_param), server_param in zip(client_model.named_parameters(), server_model.parameters()):
                 client_updates[name][i] = client_param.detach().cpu() - server_param.detach()
                 logging_table.loc[round][(name, client)] = torch.norm(client_updates[name][i], 2).item()
-
             logging_table.loc[round][('test_acc', client)] = sum(test_accuracy) / len(test_accuracy)
             logging_table.loc[round][('train_loss', client)] = sum(train_loss) / len(train_loss)
             logging_table.loc[round][('test_loss', client)] = sum(train_loss) / len(train_loss)
@@ -149,5 +147,4 @@ if __name__ == '__main__':
         with torch.no_grad():
             for name, server_param in server_model.named_parameters():
                 server_param.data = server_param.data + torch.mean(client_updates[name], dim=0)
-
-        logging_table.to_csv('result.log')
+    logging_table.to_csv('result.log')
