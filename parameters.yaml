@@ -9,7 +9,7 @@ data:
   month: 10
 
 clients:
-  n_clients: 100
+  n_clients: 10
   n_tokens: 6400
   train_ratio: 0.8
 
@@ -23,5 +23,5 @@ language_model:
   n_layers: 2
 
 federated_parameters:
-  n_rounds: 10
-  n_epochs: 5
+  n_rounds: 2
+  n_epochs: 2

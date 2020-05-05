@@ -34,16 +34,16 @@ class BigQueryLoader:
                                                header=False, index=False)
             for _, row in results_df.iterrows():
                 [client, all_data] = row
-                all_data = data.split('\n')
+                all_data = all_data.split('\n')
                 data = []
                 # todo dangerous
                 tokens_left = self.n_tokens
                 for sample in all_data:
                     if len(sample.split(' ')) < tokens_left:
                         data.append(sample)
-                        tokens_left = len(sample.split(' '))
+                        tokens_left -= len(sample.split(' '))
                     else:
-                        data.append(' '.joinsample.split(' ')[:tokens_left])
+                        data.append(' '.join(sample.split(' ')[:tokens_left]))
                         break
                 n_train = int(len(data) * self.train_ratio)
                 train_data = data[:n_train]
@@ -74,19 +74,19 @@ class RedditCommentsLoader(BigQueryLoader):
     @property
     def query(self):
         return """
-           WITH author_tokens as
-                (
-                    SELECT author as {}, STRING_AGG(REPLACE(TRIM(BODY),\'\\n\',\' \'), \'\\n\') as {}
-                    FROM reddit_comments.2019_10 comments
-                    WHERE author in (
-                        SELECT DISTINCT author
-                        FROM {}
-                        LIMIT 1000000
-                    ) 
-                    GROUP BY author
-                    HAVING LENGTH(data) - LENGTH(REPLACE(data,\' \',\'\')) >= {}
-                )
-                select *
-                from author_tokens
-                limit {}
-        """.format(self.client_field, self.data_field, self.n_tokens, self.n_clients)
+        WITH author_tokens as
+        (
+            SELECT author as {}, STRING_AGG(REPLACE(TRIM(body),\'\\n\',\' \'), \'\\n\') as {}
+            FROM reddit_comments.{}
+            WHERE author in (
+                SELECT DISTINCT author
+                FROM reddit_comments.{}
+                LIMIT 1000000
+            ) 
+            GROUP BY author
+            HAVING LENGTH(data) - LENGTH(REPLACE(data,\' \',\'\')) >= {}
+        )
+        select *
+        from author_tokens
+        limit {} offset 100
+        """.format(self.client_field, self.data_field, self.table, self.table, self.n_tokens, self.n_clients)
