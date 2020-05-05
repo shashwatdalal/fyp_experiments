@@ -10,10 +10,7 @@ data:
 
 clients:
   n_clients: 100
-  max_words_per_sample: 20
-  min_words_per_sample: 7
-  max_samples: 200
-  min_samples: 150
+  n_tokens: 6400
   train_ratio: 0.8
 
 language_model:

@@ -28,6 +28,7 @@ def configure_cuda():
     torch.manual_seed(0)
     return device
 
+
 def top3Accuracy(predictions, target):
     in_top3 = (torch.topk(predictions, k=3, dim=1).indices == target.view(-1)[..., None]).any(-1)
     return torch.sum(in_top3).item() / len(in_top3)
@@ -51,10 +52,7 @@ if __name__ == '__main__':
         reddit_loader = RedditCommentsLoader(
             table="{}_{}".format(parameters['data']['year'], parameters['data']['month']),
             n_clients=parameters['clients']['n_clients'],
-            max_words_per_sample=parameters['clients']['max_words_per_sample'],
-            min_words_per_sample=parameters['clients']['min_words_per_sample'],
-            max_samples=parameters['clients']['max_samples'],
-            min_samples=parameters['clients']['min_samples'],
+            n_tokens=parameters['clients']['n_tokens'],
             train_ratio=parameters['clients']['train_ratio']
         )
 
