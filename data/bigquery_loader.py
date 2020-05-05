@@ -33,8 +33,18 @@ class BigQueryLoader:
             results_df[self.data_field].to_csv(os.path.join(self.extraction_dir, self.full_file),
                                                header=False, index=False)
             for _, row in results_df.iterrows():
-                [client, data] = row
-                data = data.split('\n')
+                [client, all_data] = row
+                all_data = data.split('\n')
+                data = []
+                # todo dangerous
+                tokens_left = self.n_tokens
+                for sample in all_data:
+                    if len(sample.split(' ')) < tokens_left:
+                        data.append(sample)
+                        tokens_left = len(sample.split(' '))
+                    else:
+                        data.append(' '.joinsample.split(' ')[:tokens_left])
+                        break
                 n_train = int(len(data) * self.train_ratio)
                 train_data = data[:n_train]
                 test_data = data[n_train:]
@@ -53,15 +63,11 @@ class BigQueryLoader:
 
 class RedditCommentsLoader(BigQueryLoader):
 
-    def __init__(self, table, n_clients, max_words_per_sample, min_words_per_sample,
-                 max_samples, min_samples, train_ratio, root='.data'):
+    def __init__(self, table, n_clients, n_tokens, train_ratio, root='.data'):
         self.root = root
         self.table = table
+        self.n_tokens = n_tokens
         self.n_clients = n_clients
-        self.max_words_per_sample = max_words_per_sample
-        self.min_words_per_sample = min_words_per_sample
-        self.max_samples = max_samples
-        self.min_samples = min_samples
         extraction_dir = os.path.join(self.root, "Reddit-Comments-{}".format(self.table))
         super().__init__(extraction_dir, train_ratio)
 
@@ -70,17 +76,17 @@ class RedditCommentsLoader(BigQueryLoader):
         return """
            WITH author_tokens as
                 (
-                    SELECT author, STRING_AGG(REPLACE(TRIM(BODY),\'\\n\',\' \'), \'\\n\') as data
+                    SELECT author as {}, STRING_AGG(REPLACE(TRIM(BODY),\'\\n\',\' \'), \'\\n\') as {}
                     FROM reddit_comments.2019_10 comments
                     WHERE author in (
                         SELECT DISTINCT author
-                        FROM reddit_comments.2019_10
+                        FROM {}
                         LIMIT 1000000
                     ) 
                     GROUP BY author
-                    HAVING LENGTH(data) - LENGTH(REPLACE(data,\' \',\'\')) >= 1600
+                    HAVING LENGTH(data) - LENGTH(REPLACE(data,\' \',\'\')) >= {}
                 )
                 select *
                 from author_tokens
-                limit 1000
-        """
+                limit {}
+        """.format(self.client_field, self.data_field, self.n_tokens, self.n_clients)
