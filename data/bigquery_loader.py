@@ -68,18 +68,19 @@ class RedditCommentsLoader(BigQueryLoader):
     @property
     def query(self):
         return """
-            SELECT author as {}, STRING_AGG(REPLACE(TRIM(body),\'\\n\',\' \'), \'\\n\') as {}
-            FROM reddit_comments.{} 
-            WHERE 
-                LENGTH(TRIM(body)) - LENGTH(REPLACE(TRIM(body),' ','')) < {}
-                and 
-                LENGTH(TRIM(body)) - LENGTH(REPLACE(TRIM(body),' ','')) > {} 
-            GROUP BY author 
-            HAVING 
-                count(*) < {} 
-                and 
-                count(*) > {}
-            LIMIT {}
-        """.format(self.client_field, self.data_field, self.table,
-                   self.max_words_per_sample, self.min_words_per_sample,
-                   self.max_samples, self.min_samples, self.n_clients)
+           WITH author_tokens as
+                (
+                    SELECT author, STRING_AGG(REPLACE(TRIM(BODY),\'\\n\',\' \'), \'\\n\') as data
+                    FROM reddit_comments.2019_10 comments
+                    WHERE author in (
+                        SELECT DISTINCT author
+                        FROM reddit_comments.2019_10
+                        LIMIT 1000000
+                    ) 
+                    GROUP BY author
+                    HAVING LENGTH(data) - LENGTH(REPLACE(data,\' \',\'\')) >= 1600
+                )
+                select *
+                from author_tokens
+                limit 1000
+        """
