@@ -86,7 +86,8 @@ if __name__ == '__main__':
     # logging table
     model_param_names, _ = zip(*server_model.named_parameters())
     metrics = list(model_param_names) + ['test_acc', 'train_loss', 'test_loss']
-    column_names = product(metrics, range(10))
+    clients_p_round = parameters['federated_parameters']['clients_p_round']
+    column_names = product(metrics, range(clients_p_round))
     logging_table = pd.DataFrame(
         columns=pd.MultiIndex.from_tuples(column_names),
         index=pd.Index(range(parameters['federated_parameters']['n_rounds']))
@@ -95,16 +96,16 @@ if __name__ == '__main__':
     # start training
     for round in trange(parameters['federated_parameters']['n_rounds'], position=0, desc="Rounds", disable=not TQDM):
 
-        client_updates = {name: torch.zeros(10, *param.shape) for name, param in
+        client_updates = {name: torch.zeros(clients_p_round, *param.shape) for name, param in
                           server_model.named_parameters()}
 
         # perform training
-        for i, client in enumerate(tqdm(sample(clients, 10), position=1, leave=False, desc="Clients", disable=not TQDM)):
+        for i, client in enumerate(tqdm(sample(clients, clients_p_round), position=1, leave=False, desc="Clients", disable=not TQDM)):
             # 'send' client server model
             client_model = copy.deepcopy(server_model).to(device)
 
             # initialize optimizer and loss function
-            client_optimizer = optim.Adam(client_model.parameters(), lr=0.01)
+            client_optimizer = optim.Adam(client_model.parameters(), lr=parameters['federated_parameters']['client_lr'])
             loss_fn = nn.CrossEntropyLoss()
 
             # perform local update
@@ -130,11 +131,11 @@ if __name__ == '__main__':
                         test_loss.append(loss_fn(predictions, target.view(-1)).item())
                         test_accuracy.append(top3Accuracy(predictions, target))
 
-            # todo properly log test/train loss
             print("[{}:{}]".format(round, client),
                   "Test Accuracy: {}".format(sum(test_accuracy) / len(test_accuracy)),
                   "Training Loss: {}".format(sum(train_loss) / len(train_loss)),
                   "Testing Loss: {}".format(sum(test_loss) / len(test_loss)))
+
             # 'send' server update
             for (name, client_param), server_param in zip(client_model.named_parameters(), server_model.parameters()):
                 client_updates[name][i] = client_param.detach().cpu() - server_param.detach()
@@ -147,4 +148,8 @@ if __name__ == '__main__':
         with torch.no_grad():
             for name, server_param in server_model.named_parameters():
                 server_param.data = server_param.data + torch.mean(client_updates[name], dim=0)
-    logging_table.to_csv('result.log')
+        logging_table.to_csv('reddit_clients_{}_epoch_{}_lr_{}.log').format(
+            parameters['clients']['n_clients'],
+            parameters['federated_parameters']['n_epochs'],
+            parameters['federated_parameters']['client_lr']
+         )
