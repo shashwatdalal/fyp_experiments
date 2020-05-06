@@ -24,4 +24,6 @@ language_model:
 
 federated_parameters:
   n_rounds: 100
+  clients_p_round: 10
   n_epochs: 2
+  client_lr: 0.005
