@@ -141,7 +141,7 @@ if __name__ == '__main__':
                 logging_table.loc[round][(name, client)] = torch.norm(client_updates[name][i], 2).item()
             logging_table.loc[round][('test_acc', client)] = sum(test_accuracy) / len(test_accuracy)
             logging_table.loc[round][('train_loss', client)] = sum(train_loss) / len(train_loss)
-            logging_table.loc[round][('test_loss', client)] = sum(train_loss) / len(train_loss)
+            logging_table.loc[round][('test_loss', client)] = sum(test_loss) / len(test_loss)
 
         # aggregate model
         with torch.no_grad():
