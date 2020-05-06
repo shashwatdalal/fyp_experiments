@@ -127,7 +127,7 @@ if __name__ == '__main__':
                     with torch.no_grad():
                         text, target = batch.text.to(device), batch.target.to(device)
                         predictions, _ = client_model(text, client_model.init_hidden())
-                        test_loss.append(loss_fn(predictions, target.view(-1)))
+                        test_loss.append(loss_fn(predictions, target.view(-1)).item())
                         test_accuracy.append(top3Accuracy(predictions, target))
 
             # todo properly log test/train loss
