@@ -148,8 +148,8 @@ if __name__ == '__main__':
         with torch.no_grad():
             for name, server_param in server_model.named_parameters():
                 server_param.data = server_param.data + torch.mean(client_updates[name], dim=0)
-        logging_table.to_csv('reddit_clients_{}_epoch_{}_lr_{}.log').format(
+        logging_table.to_csv('reddit_clients_{}_epoch_{}_lr_{}.log'.format(
             parameters['clients']['n_clients'],
             parameters['federated_parameters']['n_epochs'],
             parameters['federated_parameters']['client_lr']
-         )
+         ))
