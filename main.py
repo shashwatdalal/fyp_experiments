@@ -4,6 +4,7 @@ from models.lstm_language_model import RNNModel
 
 import copy
 from itertools import product
+from random import sample
 from typing import List
 
 import pandas as pd
@@ -85,7 +86,7 @@ if __name__ == '__main__':
     # logging table
     model_param_names, _ = zip(*server_model.named_parameters())
     metrics = list(model_param_names) + ['test_acc', 'train_loss', 'test_loss']
-    column_names = product(metrics, clients)
+    column_names = product(metrics, range(10))
     logging_table = pd.DataFrame(
         columns=pd.MultiIndex.from_tuples(column_names),
         index=pd.Index(range(parameters['federated_parameters']['n_rounds']))
@@ -94,12 +95,11 @@ if __name__ == '__main__':
     # start training
     for round in trange(parameters['federated_parameters']['n_rounds'], position=0, desc="Rounds", disable=not TQDM):
 
-        client_updates = {name: torch.zeros(len(clients), *param.shape) for name, param in
+        client_updates = {name: torch.zeros(10, *param.shape) for name, param in
                           server_model.named_parameters()}
 
         # perform training
-        for i, client in enumerate(tqdm(clients, position=1, leave=False, desc="Clients", disable=not TQDM)):
-
+        for i, client in enumerate(tqdm(sample(clients, 10), position=1, leave=False, desc="Clients", disable=not TQDM)):
             # 'send' client server model
             client_model = copy.deepcopy(server_model).to(device)
 
@@ -138,10 +138,10 @@ if __name__ == '__main__':
             # 'send' server update
             for (name, client_param), server_param in zip(client_model.named_parameters(), server_model.parameters()):
                 client_updates[name][i] = client_param.detach().cpu() - server_param.detach()
-                logging_table.loc[round][(name, client)] = torch.norm(client_updates[name][i], 2).item()
-            logging_table.loc[round][('test_acc', client)] = sum(test_accuracy) / len(test_accuracy)
-            logging_table.loc[round][('train_loss', client)] = sum(train_loss) / len(train_loss)
-            logging_table.loc[round][('test_loss', client)] = sum(test_loss) / len(test_loss)
+                logging_table.loc[round][(name, i)] = torch.norm(client_updates[name][i], 2).item()
+            logging_table.loc[round][('test_acc', i)] = sum(test_accuracy) / len(test_accuracy)
+            logging_table.loc[round][('train_loss', i)] = sum(train_loss) / len(train_loss)
+            logging_table.loc[round][('test_loss', i)] = sum(test_loss) / len(test_loss)
 
         # aggregate model
         with torch.no_grad():
