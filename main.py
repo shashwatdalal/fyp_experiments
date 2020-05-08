@@ -110,21 +110,24 @@ if __name__ == '__main__':
             client_optimizer = optim.Adam(client_model.parameters(), lr=parameters['federated_parameters']['client_lr'])
             loss_fn = nn.NLLLoss()
 
-            # perform local update
-            # todo account for different sized batches
             train_loss, pre_test_loss, pre_test_accuracy, post_test_loss, post_test_accuracy = [], [], [], [], []
+
+            test_iter, train_iter = dataset[client]
 
             # calculate pre test loss
             for batch in tqdm(test_iter, position=3, leave=False, desc="Test Batch", disable=not TQDM):
+                train_iter, test_iter = dataset[client]
                 with torch.no_grad():
                     text, target = batch.text.to(device), batch.target.to(device)
                     predictions, _ = client_model(text, client_model.init_hidden())
                     pre_test_loss.append(loss_fn(predictions, target.view(-1)).item())
                     pre_test_accuracy.append(top3Accuracy(predictions, target))
+            logging_table.loc[round][('pre_test_loss', i)] = sum(pre_test_loss) / len(pre_test_loss)
+            logging_table.loc[round][('pre_test_acc', i)] = sum(pre_test_accuracy) / len(pre_test_accuracy)
 
+            # train
             for epoch in trange(parameters['federated_parameters']['n_epochs'],
                                 position=2, leave=False, desc="Epochs", disable=not TQDM):
-                train_iter, test_iter = dataset[client]
                 for batch in tqdm(train_iter, position=3, leave=False, desc="Train Batch", disable=not TQDM):
                     client_optimizer.zero_grad()
                     text, target = batch.text.to(device), batch.target.to(device)
@@ -133,23 +136,22 @@ if __name__ == '__main__':
                     train_loss.append(loss.item())
                     loss.backward()
                     client_optimizer.step()
-                # calculate post test loss
-                for batch in tqdm(test_iter, position=3, leave=False, desc="Test Batch", disable=not TQDM):
-                    with torch.no_grad():
-                        text, target = batch.text.to(device), batch.target.to(device)
-                        predictions, _ = client_model(text, client_model.init_hidden())
-                        post_test_loss.append(loss_fn(predictions, target.view(-1)).item())
-                        post_test_accuracy.append(top3Accuracy(predictions, target))
+            logging_table.loc[round][('train_loss', i)] = sum(train_loss) / len(train_loss)
+
+            # calculate post test loss
+            for batch in tqdm(test_iter, position=3, leave=False, desc="Test Batch", disable=not TQDM):
+                with torch.no_grad():
+                    text, target = batch.text.to(device), batch.target.to(device)
+                    predictions, _ = client_model(text, client_model.init_hidden())
+                    post_test_loss.append(loss_fn(predictions, target.view(-1)).item())
+                    post_test_accuracy.append(top3Accuracy(predictions, target))
 
             # 'send' server update
             for (name, client_param), server_param in zip(client_model.named_parameters(), server_model.parameters()):
                 client_updates[name][i] = client_param.detach().cpu() - server_param.detach()
                 logging_table.loc[round][(name, i)] = torch.norm(client_updates[name][i], 2).item()
-            logging_table.loc[round][('pre_test_acc', i)] = sum(pre_test_accuracy) / len(pre_test_accuracy)
-            logging_table.loc[round][('post_test_acc', i)] = sum(post_test_accuracy) / len(post_test_accuracy)
-            logging_table.loc[round][('train_loss', i)] = sum(train_loss) / len(train_loss)
-            logging_table.loc[round][('pre_test_loss', i)] = sum(pre_test_loss) / len(pre_test_loss)
             logging_table.loc[round][('post_test_loss', i)] = sum(post_test_loss) / len(post_test_loss)
+            logging_table.loc[round][('post_test_acc', i)] = sum(post_test_accuracy) / len(post_test_accuracy)
 
         # aggregate model
         with torch.no_grad():
