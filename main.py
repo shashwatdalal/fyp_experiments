@@ -106,7 +106,7 @@ if __name__ == '__main__':
 
             # initialize optimizer and loss function
             client_optimizer = optim.Adam(client_model.parameters(), lr=parameters['federated_parameters']['client_lr'])
-            loss_fn = nn.CrossEntropyLoss()
+            loss_fn = nn.NLLLoss()
 
             # perform local update
             # todo account for different sized batches
