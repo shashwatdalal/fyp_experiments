@@ -122,7 +122,6 @@ if __name__ == '__main__':
                     train_loss.append(loss.item())
                     loss.backward()
                     client_optimizer.step()
-
                 # calculate test loss
                 for batch in tqdm(test_iter, position=3, leave=False, desc="Test Batch", disable=not TQDM):
                     with torch.no_grad():
@@ -148,8 +147,9 @@ if __name__ == '__main__':
         with torch.no_grad():
             for name, server_param in server_model.named_parameters():
                 server_param.data = server_param.data + torch.mean(client_updates[name], dim=0)
-        logging_table.to_csv('reddit_clients_{}_epoch_{}_lr_{}.log'.format(
+        logging_table.to_csv('reddit_clients_{}_q_{}_epoch_{}_lr_{}.log'.format(
             parameters['clients']['n_clients'],
+            parameters['federated_parameters']['clients_p_round'],
             parameters['federated_parameters']['n_epochs'],
             parameters['federated_parameters']['client_lr']
          ))
