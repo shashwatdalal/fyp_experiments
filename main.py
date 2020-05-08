@@ -85,7 +85,8 @@ if __name__ == '__main__':
 
     # logging table
     model_param_names, _ = zip(*server_model.named_parameters())
-    metrics = list(model_param_names) + ['test_acc', 'train_loss', 'test_loss']
+    metrics = list(model_param_names) + \
+              ['pre_test_acc', 'post_test_acc', 'train_loss', 'pre_test_loss', 'post_test_loss']
     clients_p_round = parameters['federated_parameters']['clients_p_round']
     column_names = product(metrics, range(clients_p_round))
     logging_table = pd.DataFrame(
@@ -100,7 +101,8 @@ if __name__ == '__main__':
                           server_model.named_parameters()}
 
         # perform training
-        for i, client in enumerate(tqdm(sample(clients, clients_p_round), position=1, leave=False, desc="Clients", disable=not TQDM)):
+        for i, client in enumerate(
+                tqdm(sample(clients, clients_p_round), position=1, leave=False, desc="Clients", disable=not TQDM)):
             # 'send' client server model
             client_model = copy.deepcopy(server_model).to(device)
 
@@ -110,7 +112,16 @@ if __name__ == '__main__':
 
             # perform local update
             # todo account for different sized batches
-            train_loss, test_loss, test_accuracy = [], [], []
+            train_loss, pre_test_loss, pre_test_accuracy, post_test_loss, post_test_accuracy = [], [], [], [], []
+
+            # calculate pre test loss
+            for batch in tqdm(test_iter, position=3, leave=False, desc="Test Batch", disable=not TQDM):
+                with torch.no_grad():
+                    text, target = batch.text.to(device), batch.target.to(device)
+                    predictions, _ = client_model(text, client_model.init_hidden())
+                    pre_test_loss.append(loss_fn(predictions, target.view(-1)).item())
+                    pre_test_accuracy.append(top3Accuracy(predictions, target))
+
             for epoch in trange(parameters['federated_parameters']['n_epochs'],
                                 position=2, leave=False, desc="Epochs", disable=not TQDM):
                 train_iter, test_iter = dataset[client]
@@ -122,34 +133,32 @@ if __name__ == '__main__':
                     train_loss.append(loss.item())
                     loss.backward()
                     client_optimizer.step()
-                # calculate test loss
+                # calculate post test loss
                 for batch in tqdm(test_iter, position=3, leave=False, desc="Test Batch", disable=not TQDM):
                     with torch.no_grad():
                         text, target = batch.text.to(device), batch.target.to(device)
                         predictions, _ = client_model(text, client_model.init_hidden())
-                        test_loss.append(loss_fn(predictions, target.view(-1)).item())
-                        test_accuracy.append(top3Accuracy(predictions, target))
-
-            print("[{}:{}]".format(round, client),
-                  "Test Accuracy: {}".format(sum(test_accuracy) / len(test_accuracy)),
-                  "Training Loss: {}".format(sum(train_loss) / len(train_loss)),
-                  "Testing Loss: {}".format(sum(test_loss) / len(test_loss)))
+                        post_test_loss.append(loss_fn(predictions, target.view(-1)).item())
+                        post_test_accuracy.append(top3Accuracy(predictions, target))
 
             # 'send' server update
             for (name, client_param), server_param in zip(client_model.named_parameters(), server_model.parameters()):
                 client_updates[name][i] = client_param.detach().cpu() - server_param.detach()
                 logging_table.loc[round][(name, i)] = torch.norm(client_updates[name][i], 2).item()
-            logging_table.loc[round][('test_acc', i)] = sum(test_accuracy) / len(test_accuracy)
+            logging_table.loc[round][('pre_test_acc', i)] = sum(pre_test_accuracy) / len(pre_test_accuracy)
+            logging_table.loc[round][('post_test_acc', i)] = sum(post_test_accuracy) / len(post_test_accuracy)
             logging_table.loc[round][('train_loss', i)] = sum(train_loss) / len(train_loss)
-            logging_table.loc[round][('test_loss', i)] = sum(test_loss) / len(test_loss)
+            logging_table.loc[round][('pre_test_loss', i)] = sum(pre_test_loss) / len(pre_test_loss)
+            logging_table.loc[round][('post_test_loss', i)] = sum(post_test_loss) / len(post_test_loss)
 
         # aggregate model
         with torch.no_grad():
             for name, server_param in server_model.named_parameters():
                 server_param.data = server_param.data + torch.mean(client_updates[name], dim=0)
+
         logging_table.to_csv('reddit_clients_{}_q_{}_epoch_{}_lr_{}.log'.format(
             parameters['clients']['n_clients'],
             parameters['federated_parameters']['clients_p_round'],
             parameters['federated_parameters']['n_epochs'],
             parameters['federated_parameters']['client_lr']
-         ))
+        ))
