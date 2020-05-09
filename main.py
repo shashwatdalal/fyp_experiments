@@ -153,12 +153,22 @@ if __name__ == '__main__':
             logging_table.loc[round][('post_test_loss', client)] = sum(post_test_loss) / len(post_test_loss)
             logging_table.loc[round][('post_test_acc', client)] = sum(post_test_accuracy) / len(post_test_accuracy)
 
+        identifier = 'clients_{}_q_{}_epoch_{}_lr_{}'.format(
+            parameters['clients']['n_clients'],
+            parameters['federated_parameters']['clients_p_round'],
+            parameters['federated_parameters']['n_epochs'],
+            parameters['federated_parameters']['client_lr'])
+
         # aggregate model
         with torch.no_grad():
             for name, server_param in server_model.named_parameters():
                 server_param.data = server_param.data + torch.mean(client_updates[name], dim=0)
+                n_clients = client_updates[name].shape[0]
+                vectorized_update = client_updates[name].view(n_clients, -1).to(device)
+                similarity_measure = vectorized_update @ vectorized_update.T
+                torch.save('{}_similarity_measure/round_{}/{}.pt'.format(identifier, round, name), similarity_measure)
 
-        logging_table.to_csv('reddit_clients_{}_q_{}_epoch_{}_lr_{}.log'.format(
+        logging_table.to_csv('METRICS_clients_{}_q_{}_epoch_{}_lr_{}.csv'.format(
             parameters['clients']['n_clients'],
             parameters['federated_parameters']['clients_p_round'],
             parameters['federated_parameters']['n_epochs'],
