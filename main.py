@@ -3,6 +3,7 @@ from data.federated_datasets import FederatedLanguageDataset, FederatedDataset
 from models.lstm_language_model import RNNModel
 
 import copy
+import time
 from itertools import product
 from random import sample
 from typing import List
@@ -160,13 +161,15 @@ if __name__ == '__main__':
             parameters['federated_parameters']['client_lr'])
 
         # aggregate model
+        start = time.process_time()
         with torch.no_grad():
             for name, server_param in server_model.named_parameters():
                 server_param.data = server_param.data + torch.mean(client_updates[name], dim=0)
                 n_clients = client_updates[name].shape[0]
-                vectorized_update = client_updates[name].view(n_clients, -1).to(device)
+                vectorized_update = client_updates[name].view(n_clients, -1)
                 similarity_measure = vectorized_update @ vectorized_update.T
                 torch.save('{}_similarity_measure/round_{}/{}.pt'.format(identifier, round, name), similarity_measure)
+        print(time.process_time() - start)
 
         logging_table.to_csv('METRICS_clients_{}_q_{}_epoch_{}_lr_{}.csv'.format(
             parameters['clients']['n_clients'],
