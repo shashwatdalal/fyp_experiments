@@ -88,8 +88,11 @@ if __name__ == '__main__':
 
     # logging table
     model_param_names, _ = zip(*server_model.named_parameters())
-    metrics = list(model_param_names) + \
-              ['pre_test_acc', 'post_test_acc', 'train_loss', 'pre_test_loss', 'post_test_loss']
+
+    metrics = ['pre_test_acc', 'post_test_acc', 'train_loss', 'pre_test_loss', 'post_test_loss'] + \
+              ["l2_" + name for name in model_param_names] + \
+              ["avg_cosine_" + name for name in model_param_names]
+
     clients_p_round = parameters['federated_parameters']['clients_p_round']
     column_names = product(metrics, clients)
     logging_table = pd.DataFrame(
@@ -152,7 +155,6 @@ if __name__ == '__main__':
             # 'send' server update
             for (name, client_param), server_param in zip(client_model.named_parameters(), server_model.parameters()):
                 client_updates[name][i] = client_param.detach().cpu() - server_param.detach()
-                logging_table.loc[round][(name, client)] = torch.norm(client_updates[name][i], 2).item()
             logging_table.loc[round][('post_test_loss', client)] = sum(post_test_loss) / len(post_test_loss)
             logging_table.loc[round][('post_test_acc', client)] = sum(post_test_accuracy) / len(post_test_accuracy)
 
@@ -163,16 +165,15 @@ if __name__ == '__main__':
             parameters['federated_parameters']['client_lr'])
 
         # aggregate model
-        sim_dir = os.path.join("SIMILARITY_MEASURE_{}".format(identifier), "round_{}".format(round))
-        os.makedirs(sim_dir, exist_ok=True)
         start = time.process_time()
         with torch.no_grad():
             for name, server_param in server_model.named_parameters():
                 server_param.data = server_param.data + torch.mean(client_updates[name], dim=0)
                 n_clients = client_updates[name].shape[0]
                 vectorized_update = client_updates[name].view(n_clients, -1).to(device)
-                similarity_measure = vectorized_update @ vectorized_update.T
-                torch.save(similarity_measure, os.path.join(sim_dir, "{}.pt".format(name)))
+                logging_table.loc[round]['l2_' + name] = norms = vectorized_update.norm(dim=1)
+                cosine_sim = (vectorized_update @ vectorized_update.T) / torch.ger(norms, norms)
+                logging_table.loc[round]['avg_cosine_' + name] = cosine_sim.mean(axis=0)
 
         logging_table.to_csv('METRICS_clients_{}_q_{}_epoch_{}_lr_{}.csv'.format(
             parameters['clients']['n_clients'],
