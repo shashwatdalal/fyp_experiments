@@ -163,14 +163,14 @@ if __name__ == '__main__':
             parameters['federated_parameters']['client_lr'])
 
         # aggregate model
-        sim_dir = os.path.join("SIMILARITY_MEASURE_{}".format(identifier),str(round))
+        sim_dir = os.path.join("SIMILARITY_MEASURE_{}".format(identifier), "round_{}".format(round))
         os.makedirs(sim_dir, exist_ok=True)
         start = time.process_time()
         with torch.no_grad():
             for name, server_param in server_model.named_parameters():
                 server_param.data = server_param.data + torch.mean(client_updates[name], dim=0)
                 n_clients = client_updates[name].shape[0]
-                vectorized_update = client_updates[name].view(n_clients, -1)
+                vectorized_update = client_updates[name].view(n_clients, -1).to(device)
                 similarity_measure = vectorized_update @ vectorized_update.T
                 torch.save(similarity_measure, os.path.join(sim_dir, "{}.pt".format(name)))
         print(time.process_time() - start)
