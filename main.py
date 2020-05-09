@@ -149,7 +149,7 @@ if __name__ == '__main__':
             # 'send' server update
             for (name, client_param), server_param in zip(client_model.named_parameters(), server_model.parameters()):
                 client_updates[name][i] = client_param.detach().cpu() - server_param.detach()
-                logging_table.loc[round][(name, i)] = torch.norm(client_updates[name][i], 2).item()
+                logging_table.loc[round][(name, client)] = torch.norm(client_updates[name][i], 2).item()
             logging_table.loc[round][('post_test_loss', client)] = sum(post_test_loss) / len(post_test_loss)
             logging_table.loc[round][('post_test_acc', client)] = sum(post_test_accuracy) / len(post_test_accuracy)
 
