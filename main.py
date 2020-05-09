@@ -164,16 +164,17 @@ if __name__ == '__main__':
             parameters['federated_parameters']['n_epochs'],
             parameters['federated_parameters']['client_lr'])
 
-        # aggregate model
+        # aggregate model and collect metrics
         start = time.process_time()
         with torch.no_grad():
             for name, server_param in server_model.named_parameters():
                 server_param.data = server_param.data + torch.mean(client_updates[name], dim=0)
                 n_clients = client_updates[name].shape[0]
                 vectorized_update = client_updates[name].view(n_clients, -1).to(device)
-                logging_table.loc[round]['l2_' + name] = norms = vectorized_update.norm(dim=1)
+                norms = vectorized_update.norm(dim=1)
+                logging_table.loc[round]['l2_' + name] = norms.cpu()
                 cosine_sim = (vectorized_update @ vectorized_update.T) / torch.ger(norms, norms)
-                logging_table.loc[round]['avg_cosine_' + name] = cosine_sim.mean(axis=0)
+                logging_table.loc[round]['avg_cosine_' + name] = cosine_sim.mean(axis=0).cpu()
 
         logging_table.to_csv('METRICS_clients_{}_q_{}_epoch_{}_lr_{}.csv'.format(
             parameters['clients']['n_clients'],
