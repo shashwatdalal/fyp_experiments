@@ -172,7 +172,7 @@ if __name__ == '__main__':
                 n_clients = client_updates[name].shape[0]
                 vectorized_update = client_updates[name].view(n_clients, -1)
                 similarity_measure = vectorized_update @ vectorized_update.T
-                torch.save(os.path.join(sim_dir, "{}.pt".format(name)), similarity_measure)
+                torch.save(similarity_measure, os.path.join(sim_dir, "{}.pt".format(name)))
         print(time.process_time() - start)
 
         logging_table.to_csv('METRICS_clients_{}_q_{}_epoch_{}_lr_{}.csv'.format(
