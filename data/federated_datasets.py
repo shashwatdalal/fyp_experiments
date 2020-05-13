@@ -5,6 +5,7 @@ from typing import Tuple
 from torchtext import data
 from torchtext.data import Iterator, Field, BPTTIterator
 
+
 class LocalLanguageModelingDataset(data.Dataset):
     name = ''
     dirname = ''
@@ -33,6 +34,7 @@ class LocalLanguageModelingDataset(data.Dataset):
                 text.append(line_)
         if shuffle:
             random.shuffle(text)
+            print(text[:5])
         text = [token for line in text for token in line]
         examples = [data.Example.fromlist([text], fields)]
         super(LocalLanguageModelingDataset, self).__init__(
@@ -59,7 +61,7 @@ class FederatedLanguageDataset(FederatedDataset):
         self.vocab_size = vocab_size
         self.batch_size = batch_size
         self.bptt_len = bptt_len
-        self.field = Field(lower=True, tokenize='basic_english')
+        self.field = Field(lower=True, tokenize='basic_english', stop_words={',', '.', '!', '?', '&gt'})
         self.build_vocab()
 
     def build_vocab(self):
