@@ -118,9 +118,13 @@ if __name__ == '__main__':
             current_accuracy = sum(acc) / len(acc)
             writer.add_scalar('{}/test_acc'.format(client), current_accuracy, epoch)
 
+
             if current_test_loss < previous_test_loss:
                 previous_test_loss = current_test_loss
             else:
+                logging_table.loc[client]['train_loss'] = current_train_loss
+                logging_table.loc[client]['test_loss'] = current_test_loss
+                logging_table.loc[client]['acc'] = current_accuracy
                 # early stopping
                 torch.save({
                     'epoch': epoch,
@@ -131,3 +135,4 @@ if __name__ == '__main__':
                     'test_acc': current_accuracy
                 }, os.path.join('benchmark_models', "{}_model.tar".format(client)))
                 break
+
