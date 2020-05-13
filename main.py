@@ -115,6 +115,7 @@ if __name__ == '__main__':
         for i, client in enumerate(
                 tqdm(sample(clients, clients_p_round), position=1, leave=False, desc="Clients", disable=not TQDM)):
             # 'send' client server model
+            print(round, client)
             client_model = copy.deepcopy(server_model).to(device)
 
             # initialize optimizer and loss function
@@ -182,10 +183,10 @@ if __name__ == '__main__':
                 logging_table.loc[round]['avg_cosine_' + name] = cosine_sim.mean(axis=0).cpu()
 
         writer.add_scalar('loss/train', logging_table.loc[round]['train_loss'].mean(), round)
-        writer.add_scalar('loss/pre-test', logging_table[round]['pre_test_loss'].mean(), round)
-        writer.add_scalar('loss/pre-test-acc', logging_table[round]['pre_test_acc'].mean(), round)
-        writer.add_scalar('loss/post-test', logging_table[round]['post_test_loss'].mean(), round)
-        writer.add_scalar('loss/post-test-acc', logging_table[round]['post_test_acc'].mean(), round)
+        writer.add_scalar('loss/pre-test', logging_table.loc[round]['pre_test_loss'].mean(), round)
+        writer.add_scalar('loss/pre-test-acc', logging_table.loc[round]['pre_test_acc'].mean(), round)
+        writer.add_scalar('loss/post-test', logging_table.loc[round]['post_test_loss'].mean(), round)
+        writer.add_scalar('loss/post-test-acc', logging_table.loc[round]['post_test_acc'].mean(), round)
 
         logging_table.to_csv('METRICS_clients_{}_q_{}_epoch_{}_lr_{}.csv'.format(
             parameters['clients']['n_clients'],
