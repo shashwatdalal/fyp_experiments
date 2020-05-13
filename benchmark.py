@@ -7,7 +7,6 @@ from torch import nn, optim
 from torch.utils.tensorboard import SummaryWriter
 
 from data.bigquery_loader import RedditCommentsLoader
-from itertools import product
 from data.federated_datasets import FederatedLanguageDataset
 from models.lstm_language_model import RNNModel
 import pandas as pd
@@ -63,7 +62,7 @@ if __name__ == '__main__':
 
     device = configure_cuda()
 
-    N_EPOCHS = 75
+    N_EPOCHS = 40
 
     summary_writer_path = os.path.join('/homes', 'spd16', 'Documents', 'tensorboard')
     writer = SummaryWriter(summary_writer_path)
@@ -118,23 +117,17 @@ if __name__ == '__main__':
             current_accuracy = sum(acc) / len(acc)
             writer.add_scalar('{}/test_acc'.format(client), current_accuracy, epoch)
 
-
-            if current_test_loss < previous_test_loss:
-                previous_test_loss = current_test_loss
-            else:
-                logging_table.loc[client]['train_loss'] = current_train_loss
-                logging_table.loc[client]['test_loss'] = current_test_loss
-                logging_table.loc[client]['acc'] = current_accuracy
-                # early stopping
-                torch.save({
-                    'epoch': epoch,
-                    'model_state_dict': model.state_dict(),
-                    'optimizer': optimizer.state_dict(),
-                    'train_loss': current_train_loss,
-                    'test_loss': current_test_loss,
-                    'test_acc': current_accuracy
-                }, os.path.join('benchmark_models', "{}_model.tar".format(client)))
-                break
+        logging_table.loc[client]['train_loss'] = current_train_loss
+        logging_table.loc[client]['test_loss'] = current_test_loss
+        logging_table.loc[client]['acc'] = current_accuracy
+        torch.save({
+            'epoch': epoch,
+            'model_state_dict': model.state_dict(),
+            'optimizer': optimizer.state_dict(),
+            'train_loss': current_train_loss,
+            'test_loss': current_test_loss,
+            'test_acc': current_accuracy
+        }, os.path.join('benchmark_models', "{}_model.tar".format(client)))
 
 
     logging_table.to_csv('benchmark_local_tests.csv')
