@@ -47,11 +47,7 @@ class RNNModel(nn.Module):
         self.decoder.weight.data.uniform_(-initrange, initrange)
 
     def forward(self, input, hidden):
-        try:
-            emb = self.drop(self.encoder(input))
-        except IndexError:
-            print(input)
-            exit(1)
+        emb = self.drop(self.encoder(input))
         output, hidden = self.rnn(emb, hidden)
         output = self.drop(output)
         decoded = self.decoder(output)
