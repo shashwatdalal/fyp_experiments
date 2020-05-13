@@ -181,11 +181,11 @@ if __name__ == '__main__':
                 cosine_sim = (vectorized_update @ vectorized_update.T) / torch.ger(norms, norms)
                 logging_table.loc[round]['avg_cosine_' + name] = cosine_sim.mean(axis=0).cpu()
 
-        writer.add_scalar('loss/train', logging_table.loc['train_loss'].mean(), round)
-        writer.add_scalar('loss/pre-test', logging_table.loc['pre_test_loss'].mean(), round)
-        writer.add_scalar('loss/pre-test-acc', logging_table.loc['pre_test_acc'].mean(), round)
-        writer.add_scalar('loss/post-test', logging_table.loc['post_test_loss'].mean(), round)
-        writer.add_scalar('loss/post-test-acc', logging_table.loc['post_test_acc'].mean(), round)
+        writer.add_scalar('loss/train', logging_table.loc[round]['train_loss'].mean(), round)
+        writer.add_scalar('loss/pre-test', logging_table[round]['pre_test_loss'].mean(), round)
+        writer.add_scalar('loss/pre-test-acc', logging_table[round]['pre_test_acc'].mean(), round)
+        writer.add_scalar('loss/post-test', logging_table[round]['post_test_loss'].mean(), round)
+        writer.add_scalar('loss/post-test-acc', logging_table[round]['post_test_acc'].mean(), round)
 
         logging_table.to_csv('METRICS_clients_{}_q_{}_epoch_{}_lr_{}.csv'.format(
             parameters['clients']['n_clients'],

@@ -34,7 +34,6 @@ class LocalLanguageModelingDataset(data.Dataset):
                 text.append(line_)
         if shuffle:
             random.shuffle(text)
-            print(text[:5])
         text = [token for line in text for token in line]
         examples = [data.Example.fromlist([text], fields)]
         super(LocalLanguageModelingDataset, self).__init__(
