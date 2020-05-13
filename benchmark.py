@@ -1,12 +1,13 @@
-import glob
+import os
+
 import torch
 
 import yaml
 from torch import nn, optim
-from torchtext.data import Field, BPTTIterator
-import pandas as pd
+from torch.utils.tensorboard import SummaryWriter
 
-from data.federated_datasets import LocalLanguageModelingDataset
+from data.bigquery_loader import RedditCommentsLoader
+from data.federated_datasets import FederatedLanguageDataset
 from models.lstm_language_model import RNNModel
 
 EPOCHS = 200
@@ -37,60 +38,74 @@ if __name__ == '__main__':
     with open('parameters.yaml') as param_fd:
         parameters = yaml.safe_load(param_fd)
 
-    model: nn.Module = RNNModel(
-        rnn_type=parameters['language_model']['rnn_type'],
-        vocab_size=parameters['language_model']['vocab_size'],
-        embedding_dim=parameters['language_model']['embedding_dim'],
-        hidden_dim=parameters['language_model']['hidden_dim'],
-        n_layers=parameters['language_model']['n_layers'],
-        batch_size=parameters['language_model']['batch_size'],
+    reddit_loader = RedditCommentsLoader(
+        table="{}_{}".format(parameters['data']['year'], parameters['data']['month']),
+        n_clients=parameters['clients']['n_clients'],
+        n_tokens=parameters['clients']['n_tokens'],
+        train_ratio=parameters['clients']['train_ratio']
     )
+
+    # get client list
+    clients = reddit_loader.clients
+
+    # covert to torch data loader
+    dataset = FederatedLanguageDataset(
+        extraction_directory=reddit_loader.extraction_dir,
+        vocab_size=parameters['language_model']['vocab_size'],
+        batch_size=parameters['language_model']['batch_size'],
+        bptt_len=parameters['language_model']['bptt_len']
+    )
+
+    save_dir = 'benchmark_models'
+    os.makedirs(save_dir, exist_ok=True)
 
     device = configure_cuda()
 
-    train_files = glob.glob('.data/Reddit-Comments-2019_10/*-train.txt')
+    N_EPOCHS = 200
 
-    with open('.data/train.txt', 'w') as outfile:
-        for f in train_files:
-            with open(f, "r") as infile:
-                outfile.write(infile.read())
+    summary_writer_path = os.path.join('/homes', 'spd16', 'Documents', 'tensorboard')
+    writer = SummaryWriter(summary_writer_path)
 
-    test_files = glob.glob('.data/Reddit-Comments-2019_10/*-test.txt')
+    # train each client model locally
+    for client in clients:
+        print('training: ', client)
 
-    with open('.data/test.txt', 'w') as outfile:
-        for f in train_files:
-            with open(f, "r") as infile:
-                outfile.write(infile.read())
+        # initialize model
+        model = RNNModel(
+            rnn_type=parameters['language_model']['rnn_type'],
+            vocab_size=parameters['language_model']['vocab_size'],
+            embedding_dim=parameters['language_model']['embedding_dim'],
+            hidden_dim=parameters['language_model']['hidden_dim'],
+            n_layers=parameters['language_model']['n_layers'],
+            batch_size=parameters['language_model']['batch_size'],
+        ).to(device)
 
-    optimizer = optim.Adam(model.parameters(), lr=0.001)
-    loss_fn = nn.NLLLoss()
-    field = Field(lower=True, tokenize='basic_english')
-    train, test = LocalLanguageModelingDataset.splits(field, root='.data', train='train.txt', test='test.txt')
-    field.build_vocab(train, test, max_size=parameters['language_model']['vocab_size'])
+        for epoch in range(N_EPOCHS):
 
-    logging_table = pd.DataFrame(columns=['test_acc, train_loss, test_loss'], index=range(EPOCHS))
+            optimizer = optim.Adam(model.parameters(), lr=parameters['federated_parameters']['client_lr'])
+            loss_fn = nn.NLLLoss()
 
-    for e in range(EPOCHS):
-        print(e)
-        train_loss, test_loss, test_acc = [], [], []
-        test_iter, train_iter = BPTTIterator.splits((train, test), batch_size=32, bptt_len=20)
-        for batch in train_iter:
-            optimizer.zero_grad()
-            text, target = batch.text.to(device), batch.target.to(device)
-            predictions, _ = model(text, model.init_hidden())
-            loss = loss_fn(predictions, target.view(-1))
-            train_loss.append(loss.item())
-            loss.backward()
-            optimizer.step()
+            train_iter, test_iter = dataset[client]
 
-        for batch in test_iter:
-            with torch.no_grad():
+            train_loss, test_loss, acc = [], [], []
+
+            for batch in train_iter:
+                optimizer.zero_grad()
                 text, target = batch.text.to(device), batch.target.to(device)
                 predictions, _ = model(text, model.init_hidden())
-                test_loss.append(loss_fn(predictions, target.view(-1)).item())
-                test_acc.append(top3Accuracy(predictions, target))
+                loss = loss_fn(predictions, target.view(-1))
+                train_loss.append(loss.item())
+                loss.backward()
+                optimizer.step()
 
-        logging_table.loc[e]['train_loss'] = sum(train_loss) / len(train_loss)
-        logging_table.loc[e]['test_loss'] = sum(test_loss) / len(test_loss)
-        logging_table.loc[e]['test_acc'] = sum(test_acc) / len(test_acc)
-        logging_table.to_csv('benchmark.csv')
+            writer.add_scalar('{}/train_loss'.format(client), sum(train_loss) / len(train_loss), epoch)
+
+            for batch in test_iter:
+                with torch.no_grad():
+                    text, target = batch.text.to(device), batch.target.to(device)
+                    predictions, _ = model(text, model.init_hidden())
+                    test_loss.append(loss_fn(predictions, target.view(-1)).item())
+                    acc.append(top3Accuracy(predictions, target))
+
+            writer.add_scalar('{}/test_loss'.format(client), sum(test_loss) / len(test_loss), epoch)
+            writer.add_scalar('{}/test_acc'.format(client), sum(acc) / len(acc), epoch)
