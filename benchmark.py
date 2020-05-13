@@ -136,3 +136,5 @@ if __name__ == '__main__':
                 }, os.path.join('benchmark_models', "{}_model.tar".format(client)))
                 break
 
+
+    logging_table.to_csv('benchmark_local_tests.csv')
