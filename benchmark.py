@@ -7,8 +7,10 @@ from torch import nn, optim
 from torch.utils.tensorboard import SummaryWriter
 
 from data.bigquery_loader import RedditCommentsLoader
+from itertools import product
 from data.federated_datasets import FederatedLanguageDataset
 from models.lstm_language_model import RNNModel
+import pandas as pd
 
 EPOCHS = 200
 GPU = True
@@ -61,10 +63,12 @@ if __name__ == '__main__':
 
     device = configure_cuda()
 
-    N_EPOCHS = 200
+    N_EPOCHS = 75
 
     summary_writer_path = os.path.join('/homes', 'spd16', 'Documents', 'tensorboard')
     writer = SummaryWriter(summary_writer_path)
+
+    logging_table = pd.DataFrame(columns=['train_loss', 'test_loss', 'acc'], index=pd.Index(clients))
 
     # train each client model locally
     for client in clients:
@@ -79,6 +83,8 @@ if __name__ == '__main__':
             n_layers=parameters['language_model']['n_layers'],
             batch_size=parameters['language_model']['batch_size'],
         ).to(device)
+
+        previous_test_loss = 100
 
         for epoch in range(N_EPOCHS):
 
@@ -98,7 +104,8 @@ if __name__ == '__main__':
                 loss.backward()
                 optimizer.step()
 
-            writer.add_scalar('{}/train_loss'.format(client), sum(train_loss) / len(train_loss), epoch)
+            current_train_loss = sum(train_loss) / len(train_loss)
+            writer.add_scalar('{}/train_loss'.format(client), current_train_loss, epoch)
 
             for batch in test_iter:
                 with torch.no_grad():
@@ -106,6 +113,21 @@ if __name__ == '__main__':
                     predictions, _ = model(text, model.init_hidden())
                     test_loss.append(loss_fn(predictions, target.view(-1)).item())
                     acc.append(top3Accuracy(predictions, target))
+            current_test_loss = sum(test_loss) / len(test_loss)
+            writer.add_scalar('{}/test_loss'.format(client), current_test_loss, epoch)
+            current_accuracy = sum(acc) / len(acc)
+            writer.add_scalar('{}/test_acc'.format(client), current_accuracy, epoch)
 
-            writer.add_scalar('{}/test_loss'.format(client), sum(test_loss) / len(test_loss), epoch)
-            writer.add_scalar('{}/test_acc'.format(client), sum(acc) / len(acc), epoch)
+            if current_test_loss < previous_test_loss:
+                previous_test_loss = current_test_loss
+            else:
+                # early stopping
+                torch.save({
+                    'epoch': epoch,
+                    'model_state_dict': model.state_dict(),
+                    'optimizer': optimizer.state_dict(),
+                    'train_loss': current_train_loss,
+                    'test_loss': current_test_loss,
+                    'test_acc': current_accuracy
+                }, os.path.join('benchmark_models', "{}_model.tar".format(client)))
+                break
