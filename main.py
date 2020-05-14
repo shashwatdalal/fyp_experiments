@@ -15,7 +15,6 @@ from typing import List
 import pandas as pd
 import torch
 from torch import nn, optim
-from tqdm import tqdm, trange
 import yaml
 
 TQDM = False
@@ -102,18 +101,21 @@ if __name__ == '__main__':
         index=pd.Index(range(parameters['federated_parameters']['n_rounds']))
     )
 
-    summary_writer_path = os.path.join('/homes', 'spd16', 'Documents', 'tensorboard')
-    writer = SummaryWriter(summary_writer_path)
+    if 'log_dir' in parameters['experiment']:
+        os.makedirs(parameters['experiment']['log_dirs'], exist_ok=True)
+        summary_writer_path = os.path.join(parameters['experiment']['log_dirs'])
+        writer = SummaryWriter(summary_writer_path)
+    else:
+        writer = SummaryWriter()
 
     # start training
-    for round in trange(parameters['federated_parameters']['n_rounds'], position=0, desc="Rounds", disable=not TQDM):
+    for round in range(parameters['federated_parameters']['n_rounds']):
 
         client_updates = {name: torch.zeros(clients_p_round, *param.shape) for name, param in
                           server_model.named_parameters()}
 
         # perform training
-        for i, client in enumerate(
-                tqdm(sample(clients, clients_p_round), position=1, leave=False, desc="Clients", disable=not TQDM)):
+        for i, client in enumerate(sample(clients, clients_p_round)):
             # 'send' client server model
             print(round, client)
             client_model = copy.deepcopy(server_model).to(device)
@@ -127,20 +129,16 @@ if __name__ == '__main__':
             test_iter, train_iter = dataset[client]
 
             # calculate pre test loss
-            for batch in tqdm(test_iter, position=3, leave=False, desc="Test Batch", disable=not TQDM):
-                train_iter, test_iter = dataset[client]
+            for batch in test_iter:
                 with torch.no_grad():
                     text, target = batch.text.to(device), batch.target.to(device)
                     predictions, _ = client_model(text, client_model.init_hidden())
                     pre_test_loss.append(loss_fn(predictions, target.view(-1)).item())
                     pre_test_accuracy.append(top3Accuracy(predictions, target))
-            logging_table.loc[round][('pre_test_loss', client)] = sum(pre_test_loss) / len(pre_test_loss)
-            logging_table.loc[round][('pre_test_acc', client)] = sum(pre_test_accuracy) / len(pre_test_accuracy)
 
             # train
-            for epoch in trange(parameters['federated_parameters']['n_epochs'],
-                                position=2, leave=False, desc="Epochs", disable=not TQDM):
-                for batch in tqdm(train_iter, position=3, leave=False, desc="Train Batch", disable=not TQDM):
+            for epoch in range(parameters['federated_parameters']['n_epochs']):
+                for i, batch in enumerate(train_iter):
                     client_optimizer.zero_grad()
                     text, target = batch.text.to(device), batch.target.to(device)
                     predictions, _ = client_model(text, client_model.init_hidden())
@@ -148,10 +146,9 @@ if __name__ == '__main__':
                     train_loss.append(loss.item())
                     loss.backward()
                     client_optimizer.step()
-            logging_table.loc[round][('train_loss', client)] = sum(train_loss) / len(train_loss)
 
             # calculate post test loss
-            for batch in tqdm(test_iter, position=3, leave=False, desc="Test Batch", disable=not TQDM):
+            for batch in test_iter:
                 with torch.no_grad():
                     text, target = batch.text.to(device), batch.target.to(device)
                     predictions, _ = client_model(text, client_model.init_hidden())
@@ -161,6 +158,10 @@ if __name__ == '__main__':
             # 'send' server update
             for (name, client_param), server_param in zip(client_model.named_parameters(), server_model.parameters()):
                 client_updates[name][i] = client_param.detach().cpu() - server_param.detach()
+
+            logging_table.loc[round][('pre_test_loss', client)] = sum(pre_test_loss) / len(pre_test_loss)
+            logging_table.loc[round][('pre_test_acc', client)] = sum(pre_test_accuracy) / len(pre_test_accuracy)
+            logging_table.loc[round][('train_loss', client)] = sum(train_loss) / len(train_loss)
             logging_table.loc[round][('post_test_loss', client)] = sum(post_test_loss) / len(post_test_loss)
             logging_table.loc[round][('post_test_acc', client)] = sum(post_test_accuracy) / len(post_test_accuracy)
 
