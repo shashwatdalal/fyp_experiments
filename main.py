@@ -102,8 +102,8 @@ if __name__ == '__main__':
     )
 
     if 'log_dir' in parameters['experiment']:
-        os.makedirs(parameters['experiment']['log_dirs'], exist_ok=True)
-        summary_writer_path = os.path.join(parameters['experiment']['log_dirs'])
+        os.makedirs(parameters['experiment']['log_dir'], exist_ok=True)
+        summary_writer_path = os.path.join(parameters['experiment']['log_dir'])
         writer = SummaryWriter(summary_writer_path)
     else:
         writer = SummaryWriter()
