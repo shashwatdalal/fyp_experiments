@@ -36,7 +36,7 @@ def configure_cuda():
     return device
 
 
-def top3Accuracy(predictions, target):
+def top_3_recall(predictions, target):
     in_top3 = (torch.topk(predictions, k=3, dim=1).indices == target.view(-1)[..., None]).any(-1)
     return torch.sum(in_top3).item() / len(in_top3)
 
@@ -90,7 +90,7 @@ if __name__ == '__main__':
     # logging table
     model_param_names, _ = zip(*server_model.named_parameters())
 
-    metrics = ['pre_test_acc', 'post_test_acc', 'train_loss', 'pre_test_loss', 'post_test_loss'] + \
+    metrics = ['pre_test_acc', 'train_acc', 'post_test_acc', 'train_loss', 'pre_test_loss', 'post_test_loss'] + \
               ["l2_" + name for name in model_param_names] + \
               ["avg_cosine_" + name for name in model_param_names]
 
@@ -108,6 +108,12 @@ if __name__ == '__main__':
     else:
         writer = SummaryWriter()
 
+    identifier = 'clients_{}_q_{}_epoch_{}_lr_{}'.format(
+        parameters['clients']['n_clients'],
+        parameters['federated_parameters']['clients_p_round'],
+        parameters['federated_parameters']['n_epochs'],
+        parameters['federated_parameters']['client_lr'])
+
     # start training
     for round in range(parameters['federated_parameters']['n_rounds']):
 
@@ -124,7 +130,8 @@ if __name__ == '__main__':
             client_optimizer = optim.Adam(client_model.parameters(), lr=parameters['federated_parameters']['client_lr'])
             loss_fn = nn.NLLLoss()
 
-            train_loss, pre_test_loss, pre_test_accuracy, post_test_loss, post_test_accuracy = [], [], [], [], []
+            train_loss, pre_test_loss, post_test_loss = [], [], []
+            train_accuracy, pre_test_accuracy, post_test_accuracy = [], [], []
 
             test_iter, train_iter = dataset[client]
 
@@ -134,7 +141,7 @@ if __name__ == '__main__':
                     text, target = batch.text.to(device), batch.target.to(device)
                     predictions, _ = client_model(text, client_model.init_hidden())
                     pre_test_loss.append(loss_fn(predictions, target.view(-1)).item())
-                    pre_test_accuracy.append(top3Accuracy(predictions, target))
+                    pre_test_accuracy.append(top_3_recall(predictions, target))
 
             # train
             for epoch in range(parameters['federated_parameters']['n_epochs']):
@@ -144,6 +151,7 @@ if __name__ == '__main__':
                     predictions, _ = client_model(text, client_model.init_hidden())
                     loss = loss_fn(predictions, target.view(-1))
                     train_loss.append(loss.item())
+                    train_accuracy.append(top_3_recall(predictions, target))
                     loss.backward()
                     client_optimizer.step()
 
@@ -153,26 +161,21 @@ if __name__ == '__main__':
                     text, target = batch.text.to(device), batch.target.to(device)
                     predictions, _ = client_model(text, client_model.init_hidden())
                     post_test_loss.append(loss_fn(predictions, target.view(-1)).item())
-                    post_test_accuracy.append(top3Accuracy(predictions, target))
+                    post_test_accuracy.append(top_3_recall(predictions, target))
 
             # 'send' server update
             for (name, client_param), server_param in zip(client_model.named_parameters(), server_model.parameters()):
                 client_updates[name][i] = client_param.detach().cpu() - server_param.detach()
 
             logging_table.loc[round][('pre_test_loss', client)] = sum(pre_test_loss) / len(pre_test_loss)
-            logging_table.loc[round][('pre_test_acc', client)] = sum(pre_test_accuracy) / len(pre_test_accuracy)
             logging_table.loc[round][('train_loss', client)] = sum(train_loss) / len(train_loss)
             logging_table.loc[round][('post_test_loss', client)] = sum(post_test_loss) / len(post_test_loss)
+
+            logging_table.loc[round][('pre_test_acc', client)] = sum(pre_test_accuracy) / len(pre_test_accuracy)
+            logging_table.loc[round][('train_acc', client)] = sum(train_accuracy) / len(train_accuracy)
             logging_table.loc[round][('post_test_acc', client)] = sum(post_test_accuracy) / len(post_test_accuracy)
 
-        identifier = 'clients_{}_q_{}_epoch_{}_lr_{}'.format(
-            parameters['clients']['n_clients'],
-            parameters['federated_parameters']['clients_p_round'],
-            parameters['federated_parameters']['n_epochs'],
-            parameters['federated_parameters']['client_lr'])
-
         # aggregate model and collect metrics
-        start = time.process_time()
         with torch.no_grad():
             for name, server_param in server_model.named_parameters():
                 server_param.data = server_param.data + torch.mean(client_updates[name], dim=0)
@@ -183,11 +186,17 @@ if __name__ == '__main__':
                 cosine_sim = (vectorized_update @ vectorized_update.T) / torch.ger(norms, norms)
                 logging_table.loc[round]['avg_cosine_' + name] = cosine_sim.mean(axis=0).cpu()
 
-        writer.add_scalar('loss/train', logging_table.loc[round]['train_loss'].mean(), round)
-        writer.add_scalar('loss/pre-test', logging_table.loc[round]['pre_test_loss'].mean(), round)
-        writer.add_scalar('loss/pre-test-acc', logging_table.loc[round]['pre_test_acc'].mean(), round)
-        writer.add_scalar('loss/post-test', logging_table.loc[round]['post_test_loss'].mean(), round)
-        writer.add_scalar('loss/post-test-acc', logging_table.loc[round]['post_test_acc'].mean(), round)
+        writer.add_scalars('losses', {
+            'train': logging_table.loc[round]['train_loss'].mean(),
+            'pre-test': logging_table.loc[round]['pre_test_loss'].mean(),
+            'post-test': logging_table.loc[round]['post_test_loss'].mean()
+        }, round)
+
+        writer.add_scalars('Accuracy', {
+            'train': logging_table.loc[round]['train_acc'].mean(),
+            'pre-test': logging_table.loc[round]['pre_test_acc'].mean(),
+            'post-test': logging_table.loc[round]['post_test_acc'].mean()
+        }, round)
 
         logging_table.to_csv('METRICS_clients_{}_q_{}_epoch_{}_lr_{}.csv'.format(
             parameters['clients']['n_clients'],
