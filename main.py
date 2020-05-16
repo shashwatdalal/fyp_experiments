@@ -183,10 +183,9 @@ if __name__ == '__main__':
                 n_clients = client_updates[name].shape[0]
                 vectorized_update = client_updates[name].view(n_clients, -1).to(device)
                 norms = vectorized_update.norm(dim=1)
-                print(name, norms)
-                #logging_table.loc[round]['l2_' + name] = norms.cpu()
-                #cosine_sim = (vectorized_update @ vectorized_update.T) / torch.ger(norms, norms)
-                #logging_table.loc[round]['avg_cosine_' + name] = cosine_sim.mean(axis=0).cpu()
+                logging_table.loc[round]['l2_' + name] = norms.cpu()
+                cosine_sim = (vectorized_update @ vectorized_update.T) / torch.ger(norms, norms)
+                logging_table.loc[round]['avg_cosine_' + name] = cosine_sim.mean(axis=0).cpu()
 
         writer.add_scalars('losses', {
             'train': logging_table.loc[round]['train_loss'].mean(),
