@@ -145,7 +145,7 @@ if __name__ == '__main__':
 
             # train
             for epoch in range(parameters['federated_parameters']['n_epochs']):
-                for i, batch in enumerate(train_iter):
+                for batch in train_iter:
                     client_optimizer.zero_grad()
                     text, target = batch.text.to(device), batch.target.to(device)
                     predictions, _ = client_model(text, client_model.init_hidden())
@@ -175,6 +175,7 @@ if __name__ == '__main__':
             logging_table.loc[round][('train_acc', client)] = sum(train_accuracy) / len(train_accuracy)
             logging_table.loc[round][('post_test_acc', client)] = sum(post_test_accuracy) / len(post_test_accuracy)
 
+
         # aggregate model and collect metrics
         with torch.no_grad():
             for name, server_param in server_model.named_parameters():
@@ -182,9 +183,10 @@ if __name__ == '__main__':
                 n_clients = client_updates[name].shape[0]
                 vectorized_update = client_updates[name].view(n_clients, -1).to(device)
                 norms = vectorized_update.norm(dim=1)
-                logging_table.loc[round]['l2_' + name] = norms.cpu()
-                cosine_sim = (vectorized_update @ vectorized_update.T) / torch.ger(norms, norms)
-                logging_table.loc[round]['avg_cosine_' + name] = cosine_sim.mean(axis=0).cpu()
+                print(name, norms)
+                #logging_table.loc[round]['l2_' + name] = norms.cpu()
+                #cosine_sim = (vectorized_update @ vectorized_update.T) / torch.ger(norms, norms)
+                #logging_table.loc[round]['avg_cosine_' + name] = cosine_sim.mean(axis=0).cpu()
 
         writer.add_scalars('losses', {
             'train': logging_table.loc[round]['train_loss'].mean(),
