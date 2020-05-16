@@ -16,7 +16,7 @@ clients:
 language_model:
   vocab_size: 10_000
   batch_size: 50
-  bptt_len: 30
+  bptt_len: 15
   rnn_type: GRU
   embedding_dim: 96
   hidden_dim: 670
