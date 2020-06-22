@@ -1,0 +1,18 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[dev-packages]
+
+[packages]
+pymc3 = "*"
+jupyterlab = "*"
+seaborn = "*"
+graphviz = "*"
+torch = "*"
+scikit-learn = "*"
+ipywidgets = "*"
+
+[requires]
+python_version = "3.7"

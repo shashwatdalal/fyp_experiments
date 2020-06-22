@@ -5,6 +5,7 @@ verify_ssl = true
 
 [dev-packages]
 jupyterlab = "*"
+seaborn = "*"
 
 [packages]
 torch = "*"
@@ -12,6 +13,9 @@ google-cloud-bigquery = "*"
 torchtext = "*"
 pandas = "*"
 pyyaml = "*"
+qbstyles = "*"
+tensorboard = "*"
+qbstules = "*"
 
 [requires]
 python_version = "3.7"

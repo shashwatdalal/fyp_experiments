@@ -27,7 +27,7 @@ class LocalLanguageModelingDataset(data.Dataset):
         text = []
         with io.open(path, encoding=encoding) as f:
             for i, line in enumerate(f):
-                line_ = []
+                line_ = []q
                 line_ += text_field.preprocess(line)
                 if newline_eos:
                     line_.append(u'<eos>')

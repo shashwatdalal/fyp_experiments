@@ -24,12 +24,6 @@ class RNNModel(nn.Module):
         self.decoder_1 = nn.Linear(hidden_dim, embedding_dim)
         self.decoder_2 = nn.Linear(embedding_dim, self.vocab_size)
 
-        # Optionally tie weights as in:
-        # "Using the Output Embedding to Improve Language Models" (Press & Wolf 2016)
-        # https://arxiv.org/abs/1608.05859
-        # and
-        # "Tying Word Vectors and Word Classifiers: A Loss Framework for Language Modeling" (Inan et al. 2016)
-        # https://arxiv.org/abs/1611.01462
         if tie_weights:
             self.decoder_2.weight = self.encoder.weight
 

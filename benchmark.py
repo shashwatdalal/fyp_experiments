@@ -4,7 +4,7 @@ import torch
 
 import yaml
 from torch import nn, optim
-from torch.utils.tensorboard import SummaryWriter
+#from torch.graph_utils.tensorboard import SummaryWriter
 
 from data.bigquery_loader import RedditCommentsLoader
 from data.federated_datasets import FederatedLanguageDataset
@@ -64,7 +64,7 @@ if __name__ == '__main__':
     N_EPOCHS = 100
 
     summary_writer_path = os.path.join('/homes', 'spd16', 'Documents', 'tensorboard')
-    writer = SummaryWriter(summary_writer_path)
+    #writer = SummaryWriter(summary_writer_path)
 
     logging_table = pd.DataFrame(columns=['train_loss', 'test_loss', 'acc'], index=pd.Index(clients))
 
@@ -112,9 +112,9 @@ if __name__ == '__main__':
             current_train_loss = sum(train_loss) / len(train_loss)
             current_accuracy = sum(acc) / len(acc)
 
-            writer.add_scalar('{}/train_loss'.format(client), current_train_loss, epoch)
-            writer.add_scalar('{}/test_loss'.format(client), current_test_loss, epoch)
-            writer.add_scalar('{}/test_acc'.format(client), current_accuracy, epoch)
+            # writer.add_scalar('{}/train_loss'.format(client), current_train_loss, epoch)
+            # writer.add_scalar('{}/test_loss'.format(client), current_test_loss, epoch)
+            # writer.add_scalar('{}/test_acc'.format(client), current_accuracy, epoch)
 
 
         logging_table.loc[client]['train_loss'] = current_train_loss
